@@ -44,16 +44,19 @@
       state: present
       force: yes
 
-  - name: APT | Hold Docker updates
+  - name: APT | Hold Kubernetes updates
     dpkg_selections:
-      name: "{{ packages }}"
+      name: "{{ item }}"
       selection: hold
-    vars: 
+    loop: "{{ packages }}"
+    vars:
       packages:
       - kubelet
       - kubeadm
       - kubectl
     tags: hold
+    ignore_errors: true
+
 
   - name: SERVICE | Start and enable kubelet
     service:
