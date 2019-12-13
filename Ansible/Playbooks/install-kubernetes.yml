@@ -1,0 +1,66 @@
+--- # Kubernetes installiation playbook
+- name: Install Kubernetes
+  gather_facts: No
+  hosts: kubenodes
+  become: yes
+
+  tasks:
+  - name: Disabling Swap on all nodes
+    shell: swapoff -a
+
+  - name: Commenting Swap entries in /etc/fstab
+    replace:
+     path: /etc/fstab
+     regexp: '(.*swap*)'
+     replace: '#\1'
+
+  - name: Add Kubernetes apt key.
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+    register: add_repository_key
+    ignore_errors: false
+
+  - name: Add Kubernetes repository.
+    apt_repository:
+      repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+      state: present
+      update_cache: true
+
+  - name: APT | Install kubelet
+    package:
+      name: kubelet=1.12.7-00
+      state: present
+    notify: restart kubelet #Don't forget to Add a handler!
+    
+  - name: APT | Install kubeadm
+    package:
+      name: kubeadm=1.12.7-00
+      state: present
+
+  - name: APT | Install kubectl
+    package:
+      name: kubectl=1.12.7-00
+      state: present
+      force: yes
+
+  - name: APT | Hold Docker updates
+    dpkg_selections:
+      name: "{{ packages }}"
+      selection: hold
+    vars: 
+      packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+    tags: hold
+
+  - name: SERVICE | Start and enable kubelet
+    service:
+      name: kubelet
+      state: started
+      enabled: yes
+
+  handlers:
+    - name: restart kubelet
+      service: name=kubelet state=restarted

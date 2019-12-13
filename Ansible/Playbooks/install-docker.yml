@@ -1,0 +1,63 @@
+--- # Docker installiation playbook
+- name: Install Docker
+  gather_facts: No
+  hosts: kubenodes
+  become: yes
+
+  tasks:
+    - name: APT | Update and Upgrade
+      apt:
+        upgrade: dist
+        update_cache: yes
+        autoclean: yes
+        autoremove: yes
+ 
+    - name: APT | Add repository key via url
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: APT | Add docker repository
+      apt_repository:
+        repo:  deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+    
+    - name: APT | Install Docker-ce
+      apt: 
+        update_cache: yes
+        name: docker-ce=18.06*
+        state: present
+        force: yes
+
+    - name: APT | Hold Docker updates
+      dpkg_selections:
+        name: docker-ce
+        selection: hold
+
+    - name: APT | Install Python-pip
+      apt: 
+        name: python-pip
+        state: latest
+
+    - name: PIP | Install Docker Module for Python
+      pip:
+        name: docker
+ 
+    - name: USER | Add user "cloud_user" to docker group
+      user:
+        name: cloud_user
+        groups: docker
+        append: yes
+
+    - name: SERVICE | Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      
+    - name: Docker | Check Docker version
+      shell: docker version
+      register: output
+
+    - debug: var=output.stdout_lines
+...
